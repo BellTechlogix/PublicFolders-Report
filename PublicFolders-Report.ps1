@@ -19,6 +19,26 @@
 
 #>
 
+#Organization that the report is for
+$org = "MyCompany"
+
+#folder to store completed reports
+$rptfolder = "c:\reports\"
+
+#mail recipients for sending report
+$recipients = @("Kristopher <kroy@belltechlogix.com>","Tim <twheeler@belltechlogix.com>")
+
+#from address
+$from = "ExchangeReports@wherever.com"
+
+#smtpserver
+$smtp = "mail.wherever.com"
+
+#Timestamp
+$runtime = Get-Date -Format "yyyyMMMdd"
+$script:StartTime = Get-Date
+
+#Add the Exchange Module
 Add-PSSnapin Microsoft.Exchange.Management.PowerShell.SnapIn;
 
  
@@ -59,7 +79,7 @@ foreach ($folder in $folders)
         $ownerstr = "" 
         foreach ($owner in $owners)  
         { 
-            $ownerstr += $owner.user.exchangeaddressbookdisplayname + "," 
+            $ownerstr += (($owner.user.displayname).split(","))[1]+" "+ (($owner.user.displayname).split(","))[0] + ","
         } 
      } else { 
         $ownerstr = "" 
@@ -68,8 +88,14 @@ foreach ($folder in $folders)
      $arFolderData += $folderdata 
      $i++ 
  } 
- $arFolderData | export-csv -path c:\Reports\PublicFolderData.csv -notypeinformation
+$arFolderData | export-csv -path $rptFolder$runtime-PublicFolderData.csv -notypeinformation
 
- $recipients = @("Kristopher <kroy@belltechlogix.com>","Tim <twheeler@belltechlogix.com>","Jared <jglenn@belltechlogix.com>")
+#HTML Format for email body
+$emailBody = "<h1>$org Public Folder Report</h1>"
+$emailBody = $emailBody + "<h2>Current Public Folder Count - '$totalfolders'</h2>"
+$emailBody = $emailBody + "<p><em>"+(Get-Date -Format 'MMM dd yyyy HH:mm')+"</em></p>"
+#Get Elapsed Time Stamp
+$emailBody = $emailBody + "<p><em>"+"Script Elapsed Time is {0:hh}:{0:mm}:{0:ss}" -f (new-timespan $script:StartTime $(get-date))+"</em></p>"
 
- Send-MailMessage -from ExchangeReports@crowley.com -to $recipients -subject "Crowley Public Folder Report" -smtpserver mail.crowley.com -Attachments "C:\Reports\PublicFolderData.csv"
+#Send the message
+Send-MailMessage -from $from -to $recipients -subject $org" Public Folder Report" -smtpserver $smtp -BodyAsHtml $emailBody -Attachments $rptFolder$runtime-PublicFolderData.csv
